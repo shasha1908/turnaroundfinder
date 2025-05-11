@@ -1,0 +1,30 @@
+<!-- templates/error.html -->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Error | Business Turnaround Finder</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h1 class="card-title text-danger mb-4">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                        </h1>
+                        <h2>Oops! Something went wrong</h2>
+                        <p class="text-muted">{{ message }}</p>
+                        <a href="/" class="btn btn-primary mt-3">Return to Home</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

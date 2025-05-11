@@ -1,0 +1,494 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Business Turnaround Opportunity Finder</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        .opportunity-card {
+            margin-bottom: 20px;
+            height: 100%;
+        }
+
+        .score-pill {
+            font-size: 1.2em;
+            padding: 5px 10px;
+        }
+
+        .star-rating {
+            color: #ffc107;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-4">
+        <h1>Business Turnaround Opportunity Finder</h1>
+        <p class="text-muted">Last updated: {{ last_updated }}</p>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Filter Opportunities</h5>
+                        <div class="mb-3">
+                            <label for="minScore" class="form-label">Minimum Turnaround Score (0-100)</label>
+                            <div class="d-flex align-items-center">
+                                <input type="range" class="form-range flex-grow-1 me-2" id="minScore" min="0" max="100"
+                                    value="50">
+                                <span id="minScoreValue" class="badge bg-primary">50</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="maxDifficulty" class="form-label">Maximum Difficulty (1-5)</label>
+                            <select class="form-select" id="maxDifficulty">
+                                <option value="1">1 - Very Easy</option>
+                                <option value="2">2 - Easy</option>
+                                <option value="3">3 - Moderate</option>
+                                <option value="4">4 - Difficult</option>
+                                <option value="5" selected>5 - Very Difficult</option>
+                            </select>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary" id="searchBtn">Search Opportunities</button>
+                            <button class="btn btn-outline-secondary" id="emailBtn" data-bs-toggle="modal"
+                                data-bs-target="#emailModal">
+                                <i class="bi bi-envelope"></i> Email Results
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Data Controls</h5>
+                        <p>Refresh data to find the latest opportunities.</p>
+                        <button class="btn btn-success" id="refreshBtn">Refresh Data</button>
+                        <div id="refreshStatus" class="mt-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="resultsContainer">
+            <div class="d-flex justify-content-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts section -->
+        <div class="container mt-5">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Opportunity Score Distribution</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="scoreChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Price vs Revenue Ratio</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="priceRevenueChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Modal -->
+    <div class="modal fade" id="emailModal" tabindex="-1" aria-labelledby="emailModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="emailModalLabel">Email Results</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="emailForm">
+                        <div class="mb-3">
+                            <label for="emailInput" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="emailInput" required>
+                            <div class="form-text">We'll send the current filtered results to this email.</div>
+                        </div>
+                        <input type="hidden" id="emailMinScore" name="min_score">
+                        <input type="hidden" id="emailMaxDifficulty" name="max_difficulty">
+                    </form>
+                    <div id="emailStatus"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="sendEmailBtn">Send Results</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const minScoreSlider = document.getElementById('minScore');
+            const minScoreValue = document.getElementById('minScoreValue');
+            const maxDifficultySelect = document.getElementById('maxDifficulty');
+            const searchBtn = document.getElementById('searchBtn');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const refreshStatus = document.getElementById('refreshStatus');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const sendEmailBtn = document.getElementById('sendEmailBtn');
+            const emailStatus = document.getElementById('emailStatus');
+            const emailMinScore = document.getElementById('emailMinScore');
+            const emailMaxDifficulty = document.getElementById('emailMaxDifficulty');
+
+            // Update value display when slider changes
+            minScoreSlider.addEventListener('input', function () {
+                minScoreValue.textContent = this.value;
+            });
+
+            // Search button click
+            searchBtn.addEventListener('click', function () {
+                searchOpportunities();
+            });
+
+            // Refresh button click
+            refreshBtn.addEventListener('click', function () {
+                refreshData();
+            });
+
+            // Update email modal fields when shown
+            document.getElementById('emailModal').addEventListener('show.bs.modal', function () {
+                emailMinScore.value = document.getElementById('minScore').value;
+                emailMaxDifficulty.value = document.getElementById('maxDifficulty').value;
+                // Clear previous status
+                emailStatus.innerHTML = '';
+            });
+
+            // Send email when button is clicked
+            sendEmailBtn.addEventListener('click', function () {
+                const email = document.getElementById('emailInput').value;
+
+                if (!email) {
+                    emailStatus.innerHTML = `
+                        <div class="alert alert-danger mt-3">
+                            Please enter an email address.
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Disable button and show loading
+                sendEmailBtn.disabled = true;
+                sendEmailBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Sending...';
+
+                // Prepare form data
+                const formData = new FormData();
+                formData.append('email', email);
+                formData.append('min_score', emailMinScore.value);
+                formData.append('max_difficulty', emailMaxDifficulty.value);
+
+                // Send request
+                fetch('/email-results', {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            emailStatus.innerHTML = `
+                                <div class="alert alert-success mt-3">
+                                    ${data.message}
+                                </div>
+                            `;
+                        } else {
+                            emailStatus.innerHTML = `
+                                <div class="alert alert-danger mt-3">
+                                    ${data.message}
+                                </div>
+                            `;
+                        }
+                    })
+                    .catch(error => {
+                        emailStatus.innerHTML = `
+                            <div class="alert alert-danger mt-3">
+                                Error: ${error.message}
+                            </div>
+                        `;
+                    })
+                    .finally(() => {
+                        // Re-enable button
+                        sendEmailBtn.disabled = false;
+                        sendEmailBtn.innerHTML = 'Send Results';
+                    });
+            });
+
+            // Initial search
+            searchOpportunities();
+
+            // Load charts with initial data
+            setTimeout(loadCharts, 1000);
+
+            function refreshData() {
+                refreshBtn.disabled = true;
+                refreshStatus.innerHTML = `
+                    <div class="alert alert-info">
+                        Refreshing data...
+                    </div>
+                `;
+
+                fetch('/api/refresh-data', {
+                    method: 'POST'
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            refreshStatus.innerHTML = `
+                                <div class="alert alert-success">
+                                    ${data.message}
+                                </div>
+                            `;
+                            // Refresh the search results
+                            searchOpportunities();
+                        } else {
+                            refreshStatus.innerHTML = `
+                                <div class="alert alert-danger">
+                                    ${data.message}
+                                </div>
+                            `;
+                        }
+                    })
+                    .catch(error => {
+                        refreshStatus.innerHTML = `
+                            <div class="alert alert-danger">
+                                Error refreshing data: ${error.message}
+                            </div>
+                        `;
+                    })
+                    .finally(() => {
+                        refreshBtn.disabled = false;
+                    });
+            }
+
+            function searchOpportunities() {
+                const minScore = minScoreSlider.value;
+                const maxDifficulty = maxDifficultySelect.value;
+
+                resultsContainer.innerHTML = `
+                    <div class="d-flex justify-content-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                `;
+
+                fetch(`/api/opportunities?min_score=${minScore}&max_difficulty=${maxDifficulty}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            displayResults(data);
+                            // Update charts after search
+                            setTimeout(loadCharts, 500);
+                        } else {
+                            resultsContainer.innerHTML = `
+                                <div class="alert alert-danger">
+                                    ${data.message}
+                                </div>
+                            `;
+                        }
+                    })
+                    .catch(error => {
+                        resultsContainer.innerHTML = `
+                            <div class="alert alert-danger">
+                                Error loading opportunities: ${error.message}
+                            </div>
+                        `;
+                    });
+            }
+
+            function displayResults(data) {
+                if (data.count === 0) {
+                    resultsContainer.innerHTML = `
+                        <div class="alert alert-info">
+                            No opportunities found matching your criteria.
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = `
+                    <h2>${data.count} Opportunities Found</h2>
+                    <div class="row">
+                `;
+
+                data.opportunities.forEach((opp, index) => {
+                    // Calculate improvement areas for display
+                    const improvements = [];
+                    if (opp.price_drop == 1) improvements.push('Price recently reduced');
+                    if (opp.declining_revenue == 1) improvements.push('Revenue growth potential');
+                    if (opp.management_issues == 1) improvements.push('Management improvement');
+                    if (opp.prime_location == 1) improvements.push('Prime location');
+                    if (opp.urgency_signal == 1) improvements.push('Motivated seller');
+
+                    // Generate score color
+                    let scoreColorClass = 'bg-success';
+                    if (opp.turnaround_score < 40) scoreColorClass = 'bg-danger';
+                    else if (opp.turnaround_score < 70) scoreColorClass = 'bg-warning';
+
+                    html += `
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <span class="badge ${scoreColorClass} score-pill">${Math.round(opp.turnaround_score)}</span>
+                                    <div class="star-rating">
+                                        ${'★'.repeat(Math.round(opp.turnaround_difficulty))}${'☆'.repeat(5 - Math.round(opp.turnaround_difficulty))}
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <h5 class="card-title">${opp.title}</h5>
+                                    <h6 class="card-subtitle mb-2 text-muted">
+                                        <i class="bi bi-geo-alt-fill"></i> ${opp.location}
+                                    </h6>
+                                    <p class="card-text">${opp.description.substring(0, 120)}...</p>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-6">
+                                            <div class="text-muted small">Price</div>
+                                            <div class="fw-bold">$${Number(opp.price).toLocaleString()}</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="text-muted small">Revenue</div>
+                                            <div class="fw-bold">$${Number(opp.revenue).toLocaleString()}</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <div class="text-muted small mb-1">Improvement Areas</div>
+                                        <div>
+                                            ${improvements.map(imp =>
+                        `<span class="badge bg-light text-dark me-1 mb-1">${imp}</span>`
+                    ).join('')}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-white border-top-0 d-flex justify-content-between">
+                                    <a href="/business/${index}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-graph-up"></i> Analysis
+                                    </a>
+                                    <a href="${opp.url}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                        <i class="bi bi-link-45deg"></i> Original Listing
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `</div>`;
+                resultsContainer.innerHTML = html;
+            }
+
+            function loadCharts() {
+                fetch('/api/chart-data')
+                    .then(response => response.json())
+                    .then(data => {
+                        // Score Distribution Chart
+                        const scoreCtx = document.getElementById('scoreChart').getContext('2d');
+                        new Chart(scoreCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: data.score_labels,
+                                datasets: [{
+                                    label: 'Number of Opportunities',
+                                    data: data.score_data,
+                                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                                    borderColor: 'rgba(54, 162, 235, 1)',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        title: {
+                                            display: true,
+                                            text: 'Count'
+                                        }
+                                    },
+                                    x: {
+                                        title: {
+                                            display: true,
+                                            text: 'Turnaround Score Range'
+                                        }
+                                    }
+                                }
+                            }
+                        });
+
+                        // Price vs Revenue Chart
+                        const priceRevenueCtx = document.getElementById('priceRevenueChart').getContext('2d');
+                        new Chart(priceRevenueCtx, {
+                            type: 'scatter',
+                            data: {
+                                datasets: [{
+                                    label: 'Businesses',
+                                    data: data.price_revenue_data,
+                                    backgroundColor: data.colors,
+                                    borderColor: 'rgba(255, 255, 255, 0.7)',
+                                    borderWidth: 2,
+                                    pointRadius: 8,
+                                    pointHoverRadius: 10
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                plugins: {
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function (context) {
+                                                const point = context.raw;
+                                                return `${point.title} - $${point.x.toLocaleString()} / $${point.y.toLocaleString()}`;
+                                            }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        type: 'logarithmic',
+                                        position: 'bottom',
+                                        title: {
+                                            display: true,
+                                            text: 'Asking Price ($)'
+                                        }
+                                    },
+                                    y: {
+                                        type: 'logarithmic',
+                                        title: {
+                                            display: true,
+                                            text: 'Annual Revenue ($)'
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    })
+                    .catch(error => console.error('Error loading chart data:', error));
+            }
+        });
+    </script>
+</body>
+
+</html>

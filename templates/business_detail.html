@@ -1,0 +1,269 @@
+<!-- templates/business_detail.html -->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>{{ business.title }} | Business Turnaround Finder</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <style>
+        .score-badge {
+            font-size: 2rem;
+            padding: 10px 15px;
+            border-radius: 50%;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .improvement-card {
+            transition: transform 0.2s;
+        }
+
+        .improvement-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .property-item {
+            margin-bottom: 1rem;
+        }
+
+        .property-label {
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .star-rating {
+            color: #ffc107;
+            font-size: 1.2rem;
+        }
+
+        .impact-high {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .impact-medium {
+            color: #fd7e14;
+            font-weight: bold;
+        }
+
+        .impact-low {
+            color: #28a745;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">Home</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Business Details</li>
+            </ol>
+        </nav>
+
+        <div class="row mt-3">
+            <div class="col-md-8">
+                <h1>{{ business.title }}</h1>
+                <h5 class="text-muted">{{ business.location }}</h5>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="d-flex justify-content-end align-items-center">
+                    <div class="me-3">
+                        <div class="text-muted">Turnaround Score</div>
+                        <div class="score-badge bg-success text-white">{{ business.turnaround_score|int }}</div>
+                    </div>
+                    <div>
+                        <div class="text-muted">Difficulty</div>
+                        <div class="star-rating">
+                            {% for i in range(business.turnaround_difficulty|int) %}★{% endfor %}
+                            {% for i in range(5 - business.turnaround_difficulty|int) %}☆{% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Business Overview</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>{{ business.description }}</p>
+
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="property-item">
+                                    <div class="property-label">Asking Price</div>
+                                    <div class="fs-4">${{ business.price|int|format_number }}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="property-item">
+                                    <div class="property-label">Annual Revenue</div>
+                                    <div class="fs-4">${{ business.revenue|int|format_number }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="property-item">
+                                    <div class="property-label">Price to Revenue Ratio</div>
+                                    <div>{{ "%.2f"|format(business.price_to_revenue_ratio) }}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="property-item">
+                                    <div class="property-label">Estimated ROI</div>
+                                    <div>{{ business.roi_estimate }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <a href="{{ business.url }}" target="_blank" class="btn btn-primary">
+                                <i class="bi bi-link-45deg"></i> View Original Listing
+                            </a>
+                            <a href="mailto:?subject=Interesting Business Opportunity&body=Check out this business: {{ business.title }} - {{ business.url }}"
+                                class="btn btn-outline-secondary ms-2">
+                                <i class="bi bi-envelope"></i> Share
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Turnaround Potential</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Based on our analysis, this business shows significant turnaround potential. Here are the key
+                            areas for improvement:</p>
+
+                        <div class="row mt-3">
+                            {% for area in improvement_areas %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100 improvement-card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">{{ area.area }}</h6>
+                                        <p class="card-text">{{ area.description }}</p>
+                                        <div class="text-end">
+                                            <span
+                                                class="badge {% if area.impact == 'High' %}bg-danger{% elif area.impact == 'Medium' %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                                                {{ area.impact }} Impact
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5>Turnaround Analysis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span>Overall Score</span>
+                            <div class="progress" style="width: 60%;">
+                                <div class="progress-bar bg-success" role="progressbar"
+                                    style="width: {{ business.turnaround_score }}%;"
+                                    aria-valuenow="{{ business.turnaround_score }}" aria-valuemin="0"
+                                    aria-valuemax="100">
+                                    {{ business.turnaround_score|int }}
+                                </div>
+                            </div>
+                        </div>
+
+                        {% set factors = [
+                        {'name': 'Price Value', 'value': 100 - (business.price_to_revenue_ratio * 50)|int},
+                        {'name': 'Location Quality', 'value': 75 if business.prime_location == 1 else 50},
+                        {'name': 'Revenue Stability', 'value': 30 if business.declining_revenue == 1 else 70},
+                        {'name': 'Management Quality', 'value': 30 if business.management_issues == 1 else 70},
+                        {'name': 'Seller Motivation', 'value': 80 if business.urgency_signal == 1 else 50}
+                        ] %}
+
+                        {% for factor in factors %}
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span>{{ factor.name }}</span>
+                            <div class="progress" style="width: 60%;">
+                                {% set color = 'bg-danger' if factor.value < 40 else ('bg-warning' if factor.value < 70
+                                    else 'bg-success' ) %} <div class="progress-bar {{ color }}" role="progressbar"
+                                    style="width: {{ factor.value }}%;" aria-valuenow="{{ factor.value }}"
+                                    aria-valuemin="0" aria-valuemax="100">
+                                    {{ factor.value }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Similar Opportunities</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        <!-- In a real app, these would be dynamically generated -->
+                        <a href="#"
+                            class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            Café in Business District
+                            <span class="badge bg-success rounded-pill">82</span>
+                        </a>
+                        <a href="#"
+                            class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            Downtown Pizza Restaurant
+                            <span class="badge bg-success rounded-pill">78</span>
+                        </a>
+                        <a href="#"
+                            class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            Food Truck Business
+                            <span class="badge bg-success rounded-pill">75</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5>Next Steps</h5>
+                </div>
+                <div class="card-body">
+                    <ol class="list-group list-group-numbered">
+                        <li class="list-group-item">Request additional financial information</li>
+                        <li class="list-group-item">Schedule a site visit</li>
+                        <li class="list-group-item">Conduct customer and employee interviews</li>
+                        <li class="list-group-item">Perform market analysis for the area</li>
+                        <li class="list-group-item">Develop initial turnaround plan</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <footer class="bg-light mt-5 py-3">
+        <div class="container text-center">
+            <p class="text-muted mb-0">Business Turnaround Finder - A Weekend Project</p>
+            <p class="text-muted mb-0"><small>All data is simulated for demonstration purposes only.</small></p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
