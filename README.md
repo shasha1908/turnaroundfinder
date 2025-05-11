@@ -2,10 +2,10 @@
 
 A weekend project to identify and analyze business acquisition opportunities with high turnaround potential.
 
-![Dashboard View](screenshots/ss1.png)
-![Business Detail Analysis](screenshots/ss2.png)
-![Data Visualization](screenshots/ss3.png)
-![Mobile Responsive Design](screenshots/ss4.png)
+![Dashboard View](https://github.com/shasha1908/turnaroundfinder/raw/main/screenshots/ss1.png)
+![Business Detail Analysis](https://github.com/shasha1908/turnaroundfinder/raw/main/screenshots/ss2.png)
+![Data Visualization](https://github.com/shasha1908/turnaroundfinder/raw/main/screenshots/ss3.png)
+![Mobile Responsive Design](https://github.com/shasha1908/turnaroundfinder/raw/main/screenshots/ss4.png)
 
 ## Features
 
